@@ -1,11 +1,12 @@
 # Human-Connection Styleguide
 [![Build Status](https://img.shields.io/travis/com/Human-Connection/Nitro-Styleguide/master.svg)](https://travis-ci.com/Human-Connection/Nitro-Styleguide)
+[![npm](https://img.shields.io/npm/v/@human-connection/styleguide.svg)](https://www.npmjs.com/package/@human-connection/styleguide)
 
 CION is a Design System build primary for Vue applications. You can use it as a starting point for building your own Design System.
 
 The system utilizes design tokens, a living styleguide with integrated code playgrounds and reusable components for common UI tasks.
 
-Living styleguide demo: https://styleguide.cion.visualjerk.de
+Living styleguide demo: https://styleguide.human-connection.org
 
 Landing page demo: https://cion.visualjerk.de
 

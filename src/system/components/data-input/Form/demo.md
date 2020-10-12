@@ -51,6 +51,9 @@ Use a schema to provide validation for the form inputs. Use scoped slots to get 
   <ds-form
     v-model="formData"
     @submit="handleSubmit"
+    @input="handleInput"
+    @input-valid="handleInputValid"
+    @reset="handleReset"
     :schema="formSchema">
     <template slot-scope="{ errors, reset }">
       <ds-input
@@ -63,6 +66,12 @@ Use a schema to provide validation for the form inputs. Use scoped slots to get 
         label="Email"
         type="email"
         placeholder="Your email address ..."></ds-input>
+      <ds-input
+        icon="at"
+        model="emailConfirm"
+        label="Confirm Email"
+        type="email"
+        placeholder="Confirm your email address ..."></ds-input>
       <ds-select
         icon="user"
         model="gender"
@@ -85,7 +94,7 @@ Use a schema to provide validation for the form inputs. Use scoped slots to get 
           Reset form
         </ds-button>
         <ds-button
-          :disabled="errors"
+          :disabled="disabled"
           icon="save"
           primary>
           Save profile
@@ -111,18 +120,43 @@ Use a schema to provide validation for the form inputs. Use scoped slots to get 
         formSchema: {
           name: { required: true, message: 'Fill in a name' },
           email: { type: 'email', required: true, message: 'Fill in a valid email' },
+          emailConfirm: [
+            { validator: this.matchEmail },
+            // the last entry is called first ¯\_(ツ)_/¯
+            { type: 'email', required: true, message: 'Confirm your email'}
+          ],
           settings: {
             type: 'object',
             fields: {
               status: { min: 20, max: 300, message: 'Write between 20 and 300 letters' }
             }
           }
-        }
+        },
+        disabled: true
       }
     },
     methods: {
       handleSubmit(data) {
         console.log('Submit form ...', data)
+      },
+      handleInput(data) {
+        console.log('Input form ...', data)
+        this.disabled = true
+      },
+      handleInputValid(data) {
+        this.disabled = false
+        console.log('Input-valid form ...', data)
+      },
+      handleReset(data) {
+        console.log('Reset form ...', data)
+      },
+
+      matchEmail(rule, value, callback, source, options) {
+        var errors = [];
+        if(this.formData.email !== value) {
+          errors.push(new Error('EMail missmatch'));
+        }
+        callback(errors);
       }
     }
   }

@@ -10,7 +10,7 @@
       @keydown.tab="closeAndBlur"
       @keydown.self.down.prevent="pointerNext"
       @keydown.self.up.prevent="pointerPrev"
-      @keypress.enter.prevent.stop.self="selectPointerOption"
+      @keypress.enter.prevent.stop="handleEnter"
       @keyup.esc="close">
       <div
         v-if="icon"
@@ -61,7 +61,7 @@
             @keydown.delete.stop="deselectLastOption"
             @keydown.down.prevent="handleKeyDown"
             @keydown.up.prevent="handleKeyUp"
-            @keypress.enter.prevent.stop="selectPointerOption"
+            @keypress.enter.prevent.stop="handleEnter"
             @keyup.esc="close">
         </div>
         <div
@@ -97,7 +97,7 @@
           @keydown.delete.stop="deselectLastOption"
           @keydown.down.prevent="handleKeyDown"
           @keydown.up.prevent="handleKeyUp"
-          @keypress.enter.prevent.stop="selectPointerOption"
+          @keypress.enter.prevent.stop="handleEnter"
           @keyup.esc="close">
       </div>
       <div class="ds-select-dropdown">
@@ -134,10 +134,17 @@
           </li>
         </ul>
       </div>
-      <div
-        v-if="iconRight"
-        class="ds-select-icon-right">
-        <ds-icon :name="iconRight" />
+      <div class="ds-select-icon-right">
+        <ds-spinner
+          v-if="loading"
+          primary
+          size="small"
+          style="position: absolute"
+        />
+        <ds-icon
+          v-if="iconRight"
+          :name="iconRight"
+        />
       </div>
     </div>
   </ds-form-item>
@@ -226,12 +233,28 @@ export default {
       default: true
     },
     /**
+     * Wheter the search string inside the inputfield should be resetted
+     * when selected
+     */
+    autoResetSearch: {
+      type: Boolean,
+      default: true
+    },
+    /**
+     * Should a loading indicator be shown?
+     */
+    loading: {
+      type: Boolean,
+      default: false
+    },
+    /**
      * Function to filter the results
      */
     filter: {
       type: Function,
-      default: (option) => {
-        const value = option.value || option
+      default: (option, searchString = '', labelProp) => {
+        const value = option[labelProp] || option
+        const searchParts = (typeof searchString === 'string') ? searchString.split(' ') : []
         return searchParts.every(part => {
           if (!part) {
             return true
@@ -260,9 +283,8 @@ export default {
       if (!this.searchString) {
         return this.options
       }
-      const searchParts = this.searchString.split(' ')
 
-      return this.options.filter(this.filter)
+      return this.options.filter((option) => this.filter(option, this.searchString, this.labelProp))
     },
     pointerMax() {
       return this.filteredOptions.length - 1
@@ -275,12 +297,20 @@ export default {
           this.pointer = max
         })
       }
+    },
+    searchString(value) {
+      this.setPointer(-1)
     }
   },
   methods: {
     handleSelect(options) {
+      if (this.pointerMax < 0) {
+        return
+      }
       this.selectOption(options)
-      this.resetSearch()
+      if (this.autoResetSearch || this.multiple) {
+        this.resetSearch()
+      }
       if (this.multiple) {
         this.$refs.search.focus()
         this.handleFocus()
@@ -293,13 +323,20 @@ export default {
     },
     openAndFocus() {
       this.open()
+
+      if (this.autoResetSearch) {
+        this.resetSearch()
+      }
+
       if (!this.focus || this.multiple) {
         this.$refs.search.focus()
         this.handleFocus()
       }
     },
     open() {
-      this.resetSearch()
+      if (this.autoResetSearch || this.multiple) {
+        this.resetSearch()
+      }
       this.isOpen = true
     },
     close() {
@@ -318,6 +355,14 @@ export default {
         !this.searchString.length
       ) {
         this.deselectOption(this.innerValue.length - 1)
+      }
+    },
+    handleEnter(e) {
+      if (this.pointer >= 0) {
+        this.selectPointerOption(e)
+      } else {
+        this.setPointer(-1)
+        this.$emit('enter', e)
       }
     },
     handleKeyUp() {
@@ -340,7 +385,7 @@ export default {
       }
     },
     pointerPrev() {
-      if (this.pointer === 0) {
+      if (this.pointer <= 0) {
         this.pointer = this.pointerMax
       } else {
         this.pointer--
@@ -348,7 +393,7 @@ export default {
       this.scrollToHighlighted()
     },
     pointerNext() {
-      if (this.pointer === this.pointerMax) {
+      if (this.pointer >= this.pointerMax) {
         this.pointer = 0
       } else {
         this.pointer++
@@ -357,7 +402,7 @@ export default {
     },
     scrollToHighlighted() {
       clearTimeout(this.hadKeyboardInput)
-      if (!this.$refs.options || !this.$refs.options.children.length) {
+      if (!this.$refs.options || !this.$refs.options.children.length || this.pointerMax <= -1) {
         return
       }
       this.hadKeyboardInput = setTimeout(() => {

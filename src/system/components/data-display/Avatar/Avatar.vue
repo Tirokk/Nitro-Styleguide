@@ -1,15 +1,16 @@
 <template>
   <div
     class="ds-avatar"
-    :style="styles">
-    <img
-      v-if="!error"
-      :src="image"
-      @error="onError">
+    :class="[
+      `ds-size-${this.size}`,
+      online && 'is-online'
+    ]"
+    :style="styles"
+  >
     <ds-flex
       v-if="!hasImage || error"
       style="height: 100%">
-      <ds-flex-item center>
+      <ds-flex-item centered>
         <template v-if="isAnonymus">
           <ds-icon name="eye-slash" />
         </template>
@@ -18,19 +19,38 @@
         </template>
       </ds-flex-item>
     </ds-flex>
+    <img
+      v-if="image && !error"
+      :src="image"
+      @error="onError"
+    >
   </div>
 </template>
 
 <script>
 import helpers from './lib/helpers.js'
+import { tokens } from '@@/tokens'
+import camelCase from 'lodash/camelCase'
+import upperFirst from 'lodash/upperFirst'
 
 export default {
   name: 'DsAvatar',
   props: {
     backgroundColor: { type: String, default: null },
     name: { type: String, default: 'Anonymus' },
-    size: { type: [Number, String], default: '32px' },
-    image: { type: String, default: null }
+    /**
+     * The size used for the avatar.
+     * @options small|base|large
+     */
+    size: {
+      type: String,
+      default: 'base',
+      validator: value => {
+        return value.match(/(small|base|large|x-large)/)
+      }
+    },
+    image: { type: String, default: null },
+    online: { type: Boolean, default: false }
   },
   data() {
     return {
@@ -42,7 +62,7 @@ export default {
       return !this.name || this.name.toLowerCase() === 'anonymus'
     },
     styles() {
-      let size = this.size
+      let size = this.sizeValue
       if (Number.isInteger(Number(size))) {
         size = `${size}px`
       }
@@ -55,6 +75,9 @@ export default {
         fontWeight: 'bold',
         color: this.fontColor
       }
+    },
+    sizeValue() {
+      return tokens[`sizeAvatar${upperFirst(camelCase(this.size))}`]
     },
     hasImage() {
       return Boolean(this.image) && !this.error
